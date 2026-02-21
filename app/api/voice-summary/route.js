@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { textToSpeech } from "@/lib/elevenlabs";
 
 export async function POST(req) {
   try {
@@ -22,29 +23,9 @@ export async function POST(req) {
       .filter(Boolean)
       .join(" ");
 
-    const elevenRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text,
-        model_id: "eleven_multilingual_v2",
-      }),
-    });
-
-    if (!elevenRes.ok) {
-      const errorText = await elevenRes.text();
-      return NextResponse.json({ error: `ElevenLabs failed: ${errorText}` }, { status: 500 });
-    }
-
-    const audioBuffer = await elevenRes.arrayBuffer();
-    const base64 = Buffer.from(audioBuffer).toString("base64");
-    const audioUrl = `data:audio/mpeg;base64,${base64}`;
-
-    return NextResponse.json({ audioUrl });
+    const base64 = await textToSpeech({ text, voiceId, apiKey });
+    return NextResponse.json({ audioUrl: `data:audio/mpeg;base64,${base64}` });
   } catch (err) {
-    return NextResponse.json({ error: "Voice summary failed" }, { status: 500 });
+    return NextResponse.json({ error: err.message || "Voice summary failed" }, { status: 500 });
   }
 }
